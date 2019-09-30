@@ -1,26 +1,55 @@
 var crypto = require('crypto');
 
-const header = process.argv[2]
-console.log("TO DECRYPT base64", header)
+function getAlgorithm(keyBase64) {
 
-const enc = Buffer.from(header, 'base64').toString('utf8');
-console.log("TO DECRYPT", enc)
+    var key = Buffer.from(keyBase64, 'base64');
+    switch (key.length) {
+        case 16:
+            return 'aes-128-cbc';
+        case 32:
+            return 'aes-256-cbc';
 
-function encrypt(text, password){
-  var cipher = crypto.createCipher('aes-128-cbc',password)
-  var crypted = cipher.update(text,'utf8','hex')
-  crypted += cipher.final('hex');
-  return crypted;
+    }
+
+    throw new Error('Invalid key length: ' + key.length);
+}
+
+function encrypt(text, pass_b64, iv_b64) {
+
+    var key = Buffer.from(pass_b64, 'base64');
+    var iv = Buffer.from(iv_b64, 'base64');
+
+    var cipher = crypto.createCipheriv(getAlgorithm(pass_b64),key,iv)
+    let cip = cipher.update(text, 'utf8', 'base64')
+    cip += cipher.final('base64');
+    return cip;
 }
  
-function decrypt(text, password){
-  var decipher = crypto.createDecipher('aes-128-cbc',password)
-  var dec = decipher.update(text,'hex','utf8')
-  dec += decipher.final('utf8');
-  return dec;
+function decrypt(textb64, pass_b64, iv_b64){
+
+    var key = Buffer.from(pass_b64, 'base64');
+    var iv = Buffer.from(iv_b64, 'base64');
+
+    var decipher = crypto.createDecipheriv(getAlgorithm(pass_b64), key, iv);
+    let dec = decipher.update(textb64, 'base64');
+    dec += decipher.final();
+    return dec;
 }
 
-const decrypt_key = process.argv[3] || "[B@73035e27"
 
-const dec = decrypt(enc, decrypt_key)
-console.log("DECRYPTED", dec)
+const password = "#ABCDEF#ms&%6hcp"
+const pass_b64 = Buffer.from(password, 'utf8').toString('base64');
+
+// var keyBase64 = "DWIzFkO22qfVMgx2fIsxOXnwz10pRuZfFJBvf4RS3eY=";
+var keyBase64 = pass_b64;
+// var ivBase64 = 'AcynMwikMkW4c7+mHtwtfw==';
+var ivBase64 = 'Acyn/wikMkW4c7+mHtwtfq==';
+var plainText = 'Hello world!';
+
+var cipherText = process.argv[2] || encrypt(plainText, keyBase64, ivBase64);
+var decryptedCipherText = decrypt(cipherText, keyBase64, ivBase64);
+
+console.log('Algorithm: ' + getAlgorithm(keyBase64));
+console.log('Plaintext: ' + plainText);
+console.log('Ciphertext: ' + cipherText);
+console.log('Decoded Ciphertext: ' + decryptedCipherText);
